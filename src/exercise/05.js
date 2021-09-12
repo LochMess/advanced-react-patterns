@@ -6,12 +6,17 @@ import {Switch} from '../switch'
 
 const callAll = (...fns) => (...args) => fns.forEach(fn => fn?.(...args))
 
+const actionTypes = {
+  TOGGLE: 'toggle',
+  RESET: 'reset'
+}
+
 function toggleReducer(state, {type, initialState}) {
   switch (type) {
-    case 'toggle': {
+    case actionTypes.TOGGLE: {
       return {on: !state.on}
     }
-    case 'reset': {
+    case actionTypes.RESET: {
       return initialState
     }
     default: {
@@ -21,12 +26,21 @@ function toggleReducer(state, {type, initialState}) {
 }
 
 // 🐨 add a new option called `reducer` that defaults to `toggleReducer`
-function useToggle({initialOn = false} = {}) {
+function useToggle({initialOn = false, reducer} = {}) {
   const {current: initialState} = React.useRef({on: initialOn})
   // 🐨 instead of passing `toggleReducer` here, pass the `reducer` that's
   // provided as an option
   // ... and that's it! Don't forget to check the 💯 extra credit!
-  const [state, dispatch] = React.useReducer(toggleReducer, initialState)
+
+  // Kent's solution was to export the reducer and allow the consumer of the hook to write it
+  const combinedReducer = (state, action) => {
+    if (reducer) {
+      const stateUpdate = reducer(state, action)
+      if (stateUpdate) return stateUpdate
+    }
+    toggleReducer(state, action)
+  }
+  const [state, dispatch] = React.useReducer(combinedReducer, initialState)
   const {on} = state
 
   const toggle = () => dispatch({type: 'toggle'})
@@ -62,13 +76,13 @@ function App() {
 
   function toggleStateReducer(state, action) {
     switch (action.type) {
-      case 'toggle': {
+      case actionTypes.TOGGLE: {
         if (clickedTooMuch) {
           return {on: state.on}
         }
         return {on: !state.on}
       }
-      case 'reset': {
+      case actionTypes.RESET: {
         return {on: false}
       }
       default: {
